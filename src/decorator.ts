@@ -10,7 +10,21 @@ function factor(params: any) {
     }
 }
 
+/**
+ * 类装饰器
+ */
+function factor1(params:any) {
+    return (constructor: Function) => {
+        console.log('constructor', constructor)
+    }
+}
+
+@factor1('类装饰器')
 export class Foo {
+    @factor('这里是静态方法')
+    static say() {
+        console.log('say')
+    }
     // 首先会执行 factor 函数，并且将传递参数给 factor
     @factor('我要调用 factor 函数了')
     jump() {

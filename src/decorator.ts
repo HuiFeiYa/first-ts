@@ -31,6 +31,28 @@ function format(formatString: string) {
     return Reflect.metadata(formatMetadataKey, formatString);
 }
 
+const requiredMetadataKey = Symbol("required");
+function required(target: Object, propertyKey: string | symbol, parameterIndex: number) {
+    let existingRequiredParameters: number[] = Reflect.getOwnMetadata(requiredMetadataKey, target, propertyKey) || [];
+    existingRequiredParameters.push(parameterIndex);
+    Reflect.defineMetadata(requiredMetadataKey, existingRequiredParameters, target, propertyKey);
+}
+
+function validate(target: any, propertyName: string, descriptor: TypedPropertyDescriptor<any>) {
+    let method = descriptor.value;
+    descriptor.value = function () {
+        let requiredParameters: number[] = Reflect.getOwnMetadata(requiredMetadataKey, target, propertyName);
+        if (requiredParameters) {
+            for (let parameterIndex of requiredParameters) {
+                if (parameterIndex >= arguments.length || arguments[parameterIndex] === undefined) {
+                    throw new Error("Missing required argument.");
+                }
+            }
+        }
+
+        return method?.apply(this, arguments);
+    }
+}
 
 @factor1('类装饰器')
 export class Foo {
@@ -56,8 +78,14 @@ export class Foo {
     jump() {
         console.log('i want to jump')
     }
+
+    @validate
+    greet(@required name?: string) {
+        return "Hello " + name + ", " + this.greeting;
+    }
 }
 const foo = new Foo()
 // 读取类上属性的元数据语法： Reflect.getMetadata(metadataKey, target[, propertyKey])
 const result = Reflect.getMetadata(formatMetadataKey, foo, "greeting");
-console.log('result: ', result)
+
+foo.greet()
